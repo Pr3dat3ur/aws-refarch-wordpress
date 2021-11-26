@@ -138,6 +138,7 @@ Parameters:
     Type: AWS::EC2::KeyPair::KeyName
   NumberOfSubnets:
     AllowedValues:
+    - 1
     - 2
     - 3
     - 4
@@ -212,6 +213,8 @@ Mappings:
       AMI: ami-1a962263
     eu-west-2:
       AMI: ami-e7d6c983
+    eu-west-3:
+      AMI: ami-00bf323ac99d8bbbb
     sa-east-1:
       AMI: ami-286f2a44
     us-east-1:

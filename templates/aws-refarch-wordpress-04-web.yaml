@@ -127,7 +127,7 @@ Parameters:
     Description: The Amazon RDS master database name.
     Type: String
   ElasticFileSystem:
-    AllowedPattern: ^(fs-)([a-z0-9]{8})$
+    AllowedPattern: ^(fs-)([a-z0-9]{17})$
     Description: The Amazon EFS file system id.
     Type: String
   EC2KeyName:
@@ -398,6 +398,8 @@ Mappings:
       AMI: ami-1a962263
     eu-west-2:
       AMI: ami-e7d6c983
+    eu-west-3:
+      AMI: ami-00bf323ac99d8bbbb
     sa-east-1:
       AMI: ami-286f2a44
     us-east-1:
@@ -700,7 +702,7 @@ Resources:
             mkdir -p /var/www/wordpress
             mount -t nfs4 -o nfsvers=4.1,rsize=1048576,wsize=1048576,hard,timeo=600,retrans=2 ${ElasticFileSystem}.efs.${AWS::Region}.amazonaws.com:/ /var/www/wordpress
             /opt/aws/bin/cfn-init --configsets deploy_webserver --verbose --stack ${AWS::StackName} --resource WebLaunchConfiguration55 --region ${AWS::Region}
-            /opt/aws/bin/cfn-signal --exit-code $? --stack ${AWS::StackName} --resource WebAutoScalingGroup --region ${AWS::Region}
+#            /opt/aws/bin/cfn-signal --exit-code $? --stack ${AWS::StackName} --resource WebAutoScalingGroup --region ${AWS::Region}
   WebLaunchConfiguration56:
     Condition: PHP56
     Type: AWS::AutoScaling::LaunchConfiguration
@@ -908,7 +910,7 @@ Resources:
             mkdir -p /var/www/wordpress
             mount -t nfs4 -o nfsvers=4.1,rsize=1048576,wsize=1048576,hard,timeo=600,retrans=2 ${ElasticFileSystem}.efs.${AWS::Region}.amazonaws.com:/ /var/www/wordpress
             /opt/aws/bin/cfn-init --configsets deploy_webserver --verbose --stack ${AWS::StackName} --resource WebLaunchConfiguration56 --region ${AWS::Region}
-            /opt/aws/bin/cfn-signal --exit-code $? --stack ${AWS::StackName} --resource WebAutoScalingGroup --region ${AWS::Region}
+#            /opt/aws/bin/cfn-signal --exit-code $? --stack ${AWS::StackName} --resource WebAutoScalingGroup --region ${AWS::Region}
   WebLaunchConfiguration70:
     Condition: PHP70
     Type: AWS::AutoScaling::LaunchConfiguration
@@ -1117,7 +1119,7 @@ Resources:
             mkdir -p /var/www/wordpress
             mount -t nfs4 -o nfsvers=4.1,rsize=1048576,wsize=1048576,hard,timeo=600,retrans=2 ${ElasticFileSystem}.efs.${AWS::Region}.amazonaws.com:/ /var/www/wordpress
             /opt/aws/bin/cfn-init --configsets deploy_webserver --verbose --stack ${AWS::StackName} --resource WebLaunchConfiguration70 --region ${AWS::Region}
-            /opt/aws/bin/cfn-signal --exit-code $? --stack ${AWS::StackName} --resource WebAutoScalingGroup --region ${AWS::Region}
+#            /opt/aws/bin/cfn-signal --exit-code $? --stack ${AWS::StackName} --resource WebAutoScalingGroup --region ${AWS::Region}
 
 
 Outputs:

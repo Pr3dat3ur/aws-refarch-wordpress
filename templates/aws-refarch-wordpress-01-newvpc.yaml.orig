@@ -17,6 +17,7 @@ Metadata:
     - Label:
         default: Amazon VPC Parameters
       Parameters:
+      - NumberOfAZs
       - AvailabilityZones
       - VpcCidr
       - VpcTenancy
@@ -41,6 +42,8 @@ Metadata:
     ParameterLabels:
       AvailabilityZones:
         default: Availability Zones
+      NumberOfAZs:
+        default: Number of Availability Zones
       VpcCidr:
         default: VpcCidr
       VpcTenancy:
@@ -88,6 +91,18 @@ Parameters:
     Description: 'List of Availability Zones to use for the subnets in the VPC. Note:
       The logical order is preserved.'
     Type: List<AWS::EC2::AvailabilityZone::Name>
+  NumberOfAZs:
+    AllowedValues:
+    - 2
+    - 3
+    - 4
+    - 5
+    - 6
+    - 7
+    Default: 3
+    Description: Number of Availability Zones to use in the VPC. This must match your
+      selections in the list of Availability Zones parameter.
+    Type: Number
   VpcCidr:
     AllowedPattern: "^(([0-9]|[1-9][0-9]|1[0-9]{2}|2[0-4][0-9]|25[0-5])\\.){3}([0-9]|[1-9][0-9]|1[0-9]{2}|2[0-4][0-9]|25[0-5])(\\/(1[6-9]|2[0-8]))$"
     ConstraintDescription: CIDR block parameter must be in the form x.x.x.x/16-28
@@ -210,214 +225,279 @@ Parameters:
     Description: CIDR block for Web subnet 5 located in Availability Zone 5
     Type: String
 
+Conditions:
+
+  NumberOfAZs1:
+      !Equals [ '1', !Ref NumberOfAZs ]
+  NumberOfAZs2:
+      !Equals [ '2', !Ref NumberOfAZs ]
+  NumberOfAZs3:
+      !Equals [ '3', !Ref NumberOfAZs ]
+  NumberOfAZs4:
+      !Equals [ '4', !Ref NumberOfAZs ]
+  NumberOfAZs5:
+      !Equals [ '5', !Ref NumberOfAZs ]
+  NumberOfAZs6:
+      !Equals [ '6', !Ref NumberOfAZs ]
+  AZ0: !Or
+    - !Condition NumberOfAZs1
+    - !Condition NumberOfAZs2
+    - !Condition NumberOfAZs3
+    - !Condition NumberOfAZs4
+    - !Condition NumberOfAZs5
+    - !Condition NumberOfAZs6
+  AZ1: !Or
+    - !Condition NumberOfAZs2
+    - !Condition NumberOfAZs3
+    - !Condition NumberOfAZs4
+    - !Condition NumberOfAZs5
+    - !Condition NumberOfAZs6
+  AZ2: !Or
+    - !Condition NumberOfAZs3
+    - !Condition NumberOfAZs4
+    - !Condition NumberOfAZs5
+    - !Condition NumberOfAZs6
+  AZ3: !Or
+    - !Condition NumberOfAZs4
+    - !Condition NumberOfAZs5
+    - !Condition NumberOfAZs6
+  AZ4: !Or
+    - !Condition NumberOfAZs5
+    - !Condition NumberOfAZs6
+  AZ5: !Condition NumberOfAZs6
+
 Resources:
 
   WebSubnet0:
+    Condition: AZ0
     Type: AWS::EC2::Subnet
     Properties:
-      AvailabilityZone: eu-west-3a
+      AvailabilityZone: !Select [ 0, !Ref AvailabilityZones ]
       CidrBlock: !Ref WebSubnet0Cidr
       MapPublicIpOnLaunch: false
       Tags:
         - Key: Name
-          Value: !Join [ '', [ 'Private Backend A ', !Ref 'AWS::StackName' ] ]
+          Value: !Join [ '', [ 'WebSubnet0 / ', !Ref 'AWS::StackName' ] ]
         - Key: SubnetType
           Value: Private
       VpcId: !Ref Vpc
   WebSubnet1:
+    Condition: AZ1
     Type: AWS::EC2::Subnet
     Properties:
-      AvailabilityZone: eu-west-3b
+      AvailabilityZone: !Select [ 1, !Ref AvailabilityZones ]
       CidrBlock: !Ref WebSubnet1Cidr
       MapPublicIpOnLaunch: false
       Tags:
         - Key: Name
-          Value: !Join [ '', [ 'Private Backend B ', !Ref 'AWS::StackName' ] ]
+          Value: !Join [ '', [ 'WebSubnet1 / ', !Ref 'AWS::StackName' ] ]
         - Key: SubnetType
           Value: Private
       VpcId: !Ref Vpc
-  WebSubnet2:    
+  WebSubnet2:
+    Condition: AZ2
     Type: AWS::EC2::Subnet
     Properties:
-      AvailabilityZone: eu-west-3c
+      AvailabilityZone: !Select [ 2, !Ref AvailabilityZones ]
       CidrBlock: !Ref WebSubnet2Cidr
       MapPublicIpOnLaunch: false
       Tags:
         - Key: Name
-          Value: !Join [ '', [ 'Private Backend C ', !Ref 'AWS::StackName' ] ]
+          Value: !Join [ '', [ 'WebSubnet2 / ', !Ref 'AWS::StackName' ] ]
         - Key: SubnetType
           Value: Private
       VpcId: !Ref Vpc
-  WebSubnet3:    
+  WebSubnet3:
+    Condition: AZ3
     Type: AWS::EC2::Subnet
     Properties:
-      AvailabilityZone: eu-west-3a
+      AvailabilityZone: !Select [ 3, !Ref AvailabilityZones ]
       CidrBlock: !Ref WebSubnet3Cidr
       MapPublicIpOnLaunch: false
       Tags:
         - Key: Name
-          Value: !Join [ '', [ 'Private Datastore A ', !Ref 'AWS::StackName' ] ]
+          Value: !Join [ '', [ 'WebSubnet3 / ', !Ref 'AWS::StackName' ] ]
         - Key: SubnetType
           Value: Private
       VpcId: !Ref Vpc
-  WebSubnet4:    
+  WebSubnet4:
+    Condition: AZ4
     Type: AWS::EC2::Subnet
     Properties:
-      AvailabilityZone: eu-west-3b
+      AvailabilityZone: !Select [ 4, !Ref AvailabilityZones ]
       CidrBlock: !Ref WebSubnet4Cidr
       MapPublicIpOnLaunch: false
       Tags:
         - Key: Name
-          Value: !Join [ '', [ 'Private Datastore B ', !Ref 'AWS::StackName' ] ]
+          Value: !Join [ '', [ 'WebSubnet4 / ', !Ref 'AWS::StackName' ] ]
         - Key: SubnetType
           Value: Private
       VpcId: !Ref Vpc
-  WebSubnet5:    
+  WebSubnet5:
+    Condition: AZ5
     Type: AWS::EC2::Subnet
     Properties:
-      AvailabilityZone: eu-west-3c
+      AvailabilityZone: !Select [ 5, !Ref AvailabilityZones ]
       CidrBlock: !Ref WebSubnet5Cidr
       MapPublicIpOnLaunch: false
       Tags:
         - Key: Name
-          Value: !Join [ '', [ 'Private Datastore C ', !Ref 'AWS::StackName' ] ]
+          Value: !Join [ '', [ 'WebSubnet5 / ', !Ref 'AWS::StackName' ] ]
         - Key: SubnetType
           Value: Private
       VpcId: !Ref Vpc
 
-  WebSubnetRouteTableAssociation0:    
+  WebSubnetRouteTableAssociation0:
+    Condition: AZ0
     Type: AWS::EC2::SubnetRouteTableAssociation
     Properties:
       RouteTableId: !Ref NatRouteTable0
       SubnetId: !Ref WebSubnet0
-  WebSubnetRouteTableAssociation1:    
+  WebSubnetRouteTableAssociation1:
+    Condition: AZ1
     Type: AWS::EC2::SubnetRouteTableAssociation
     Properties:
-      RouteTableId: !Ref NatRouteTable0
+      RouteTableId: !Ref NatRouteTable1
       SubnetId: !Ref WebSubnet1
-  WebSubnetRouteTableAssociation2:    
+  WebSubnetRouteTableAssociation2:
+    Condition: AZ2
     Type: AWS::EC2::SubnetRouteTableAssociation
     Properties:
-      RouteTableId: !Ref NatRouteTable0
+      RouteTableId: !Ref NatRouteTable2
       SubnetId: !Ref WebSubnet2
-  WebSubnetRouteTableAssociation3:    
+  WebSubnetRouteTableAssociation3:
+    Condition: AZ3
     Type: AWS::EC2::SubnetRouteTableAssociation
     Properties:
-      RouteTableId: !Ref NatRouteTable0
+      RouteTableId: !Ref NatRouteTable3
       SubnetId: !Ref WebSubnet3
-  WebSubnetRouteTableAssociation4:    
+  WebSubnetRouteTableAssociation4:
+    Condition: AZ4
     Type: AWS::EC2::SubnetRouteTableAssociation
     Properties:
-      RouteTableId: !Ref NatRouteTable0
+      RouteTableId: !Ref NatRouteTable4
       SubnetId: !Ref WebSubnet4
-  WebSubnetRouteTableAssociation5:    
+  WebSubnetRouteTableAssociation5:
+    Condition: AZ5
     Type: AWS::EC2::SubnetRouteTableAssociation
     Properties:
-      RouteTableId: !Ref NatRouteTable0
+      RouteTableId: !Ref NatRouteTable5
       SubnetId: !Ref WebSubnet5
 
-  DataSubnet0:    
+  DataSubnet0:
+    Condition: AZ0
     Type: AWS::EC2::Subnet
     Properties:
-      AvailabilityZone: eu-west-3a
+      AvailabilityZone: !Select [ 0, !Ref AvailabilityZones ]
       CidrBlock: !Ref DataSubnet0Cidr
       MapPublicIpOnLaunch: false
       Tags:
         - Key: Name
-          Value: !Join [ '', [ 'Protected Datastore A ', !Ref 'AWS::StackName' ] ]
+          Value: !Join [ '', [ 'DataSubnet0 / ', !Ref 'AWS::StackName' ] ]
         - Key: SubnetType
           Value: Private
       VpcId: !Ref Vpc
-  DataSubnet1:    
+  DataSubnet1:
+    Condition: AZ1
     Type: AWS::EC2::Subnet
     Properties:
-      AvailabilityZone: eu-west-3b
+      AvailabilityZone: !Select [ 1, !Ref AvailabilityZones ]
       CidrBlock: !Ref DataSubnet1Cidr
       MapPublicIpOnLaunch: false
       Tags:
         - Key: Name
-          Value: !Join [ '', [ 'Protected Datastore B ', !Ref 'AWS::StackName' ] ]
+          Value: !Join [ '', [ 'DataSubnet1 / ', !Ref 'AWS::StackName' ] ]
         - Key: SubnetType
           Value: Private
       VpcId: !Ref Vpc
-  DataSubnet2:    
+  DataSubnet2:
+    Condition: AZ2
     Type: AWS::EC2::Subnet
     Properties:
-      AvailabilityZone: eu-west-3c
+      AvailabilityZone: !Select [ 2, !Ref AvailabilityZones ]
       CidrBlock: !Ref DataSubnet2Cidr
       MapPublicIpOnLaunch: false
       Tags:
         - Key: Name
-          Value: !Join [ '', [ 'Protected Datastore C ', !Ref 'AWS::StackName' ] ]
+          Value: !Join [ '', [ 'DataSubnet2 / ', !Ref 'AWS::StackName' ] ]
         - Key: SubnetType
           Value: Private
       VpcId: !Ref Vpc
-  DataSubnet3:    
+  DataSubnet3:
+    Condition: AZ3
     Type: AWS::EC2::Subnet
     Properties:
-      AvailabilityZone: eu-west-3a
+      AvailabilityZone: !Select [ 3, !Ref AvailabilityZones ]
       CidrBlock: !Ref DataSubnet3Cidr
       MapPublicIpOnLaunch: false
       Tags:
         - Key: Name
-          Value: !Join [ '', [ 'Protected Management A ', !Ref 'AWS::StackName' ] ]
+          Value: !Join [ '', [ 'DataSubnet3 / ', !Ref 'AWS::StackName' ] ]
         - Key: SubnetType
           Value: Private
       VpcId: !Ref Vpc
-  DataSubnet4:    
+  DataSubnet4:
+    Condition: AZ4
     Type: AWS::EC2::Subnet
     Properties:
-      AvailabilityZone: eu-west-3b
+      AvailabilityZone: !Select [ 4, !Ref AvailabilityZones ]
       CidrBlock: !Ref DataSubnet4Cidr
       MapPublicIpOnLaunch: false
       Tags:
         - Key: Name
-          Value: !Join [ '', [ 'Protected Management B ', !Ref 'AWS::StackName' ] ]
+          Value: !Join [ '', [ 'DataSubnet4 / ', !Ref 'AWS::StackName' ] ]
         - Key: SubnetType
           Value: Private
       VpcId: !Ref Vpc
-  DataSubnet5:    
+  DataSubnet5:
+    Condition: AZ5
     Type: AWS::EC2::Subnet
     Properties:
-      AvailabilityZone: eu-west-3c
+      AvailabilityZone: !Select [ 5, !Ref AvailabilityZones ]
       CidrBlock: !Ref DataSubnet5Cidr
       MapPublicIpOnLaunch: false
       Tags:
         - Key: Name
-          Value: !Join [ '', [ 'Protected Management C ', !Ref 'AWS::StackName' ] ]
+          Value: !Join [ '', [ 'DataSubnet5 / ', !Ref 'AWS::StackName' ] ]
         - Key: SubnetType
           Value: Private
       VpcId: !Ref Vpc
 
-  DataSubnetRouteTableAssociation0:    
+  DataSubnetRouteTableAssociation0:
+    Condition: AZ0
     Type: AWS::EC2::SubnetRouteTableAssociation
     Properties:
       RouteTableId: !Ref NatRouteTable0
       SubnetId: !Ref DataSubnet0
-  DataSubnetRouteTableAssociation1:    
+  DataSubnetRouteTableAssociation1:
+    Condition: AZ1
     Type: AWS::EC2::SubnetRouteTableAssociation
     Properties:
-      RouteTableId: !Ref NatRouteTable0
+      RouteTableId: !Ref NatRouteTable1
       SubnetId: !Ref DataSubnet1
-  DataSubnetRouteTableAssociation2:    
+  DataSubnetRouteTableAssociation2:
+    Condition: AZ2
     Type: AWS::EC2::SubnetRouteTableAssociation
     Properties:
-      RouteTableId: !Ref NatRouteTable0
+      RouteTableId: !Ref NatRouteTable2
       SubnetId: !Ref DataSubnet2
-  DataSubnetRouteTableAssociation3:    
+  DataSubnetRouteTableAssociation3:
+    Condition: AZ3
     Type: AWS::EC2::SubnetRouteTableAssociation
     Properties:
-      RouteTableId: !Ref NatRouteTable0
+      RouteTableId: !Ref NatRouteTable3
       SubnetId: !Ref DataSubnet3
-  DataSubnetRouteTableAssociation4:    
+  DataSubnetRouteTableAssociation4:
+    Condition: AZ4
     Type: AWS::EC2::SubnetRouteTableAssociation
     Properties:
-      RouteTableId: !Ref NatRouteTable0
+      RouteTableId: !Ref NatRouteTable4
       SubnetId: !Ref DataSubnet4
-  DataSubnetRouteTableAssociation5:    
+  DataSubnetRouteTableAssociation5:
+    Condition: AZ5
     Type: AWS::EC2::SubnetRouteTableAssociation
     Properties:
-      RouteTableId: !Ref NatRouteTable0
+      RouteTableId: !Ref NatRouteTable5
       SubnetId: !Ref DataSubnet5
 
   InternetGateway:
@@ -432,28 +512,182 @@ Resources:
       InternetGatewayId: !Ref InternetGateway
       VpcId: !Ref Vpc
 
-  NatEIP0:    
+  NatEIP0:
+    Condition: AZ0
     Type: AWS::EC2::EIP
     Properties:
       Domain: vpc
-  NatGateway0:    
+  NatGateway0:
+    Condition: AZ0
     Type: AWS::EC2::NatGateway
     DependsOn: AttachInternetGateway
     Properties:
       AllocationId: !GetAtt NatEIP0.AllocationId
       SubnetId: !Ref PublicSubnet0
-  NatRoute0:    
+  NatRoute0:
+    Condition: AZ0
     Type: AWS::EC2::Route
     Properties:
       RouteTableId: !Ref NatRouteTable0
       DestinationCidrBlock: 0.0.0.0/0
       NatGatewayId: !Ref NatGateway0
-  NatRouteTable0:    
+  NatRouteTable0:
+    Condition: AZ0
     Type: AWS::EC2::RouteTable
     Properties:
       Tags:
         - Key: Name
           Value: !Join [ '', ['NatRouteTable0 / ', !Ref 'AWS::StackName' ] ]
+        - Key: Network
+          Value: Public
+      VpcId: !Ref Vpc
+
+  NatEIP1:
+    Condition: AZ1
+    Type: AWS::EC2::EIP
+    Properties:
+      Domain: vpc
+  NatGateway1:
+    Condition: AZ1
+    Type: AWS::EC2::NatGateway
+    DependsOn: AttachInternetGateway
+    Properties:
+      AllocationId: !GetAtt NatEIP1.AllocationId
+      SubnetId: !Ref PublicSubnet1
+  NatRoute1:
+    Condition: AZ1
+    Type: AWS::EC2::Route
+    Properties:
+      RouteTableId: !Ref NatRouteTable1
+      DestinationCidrBlock: 0.0.0.0/0
+      NatGatewayId: !Ref NatGateway1
+  NatRouteTable1:
+    Condition: AZ1
+    Type: AWS::EC2::RouteTable
+    Properties:
+      Tags:
+        - Key: Name
+          Value: !Join [ '', [ 'NatRouteTable1 / ', !Ref 'AWS::StackName' ] ]
+        - Key: Network
+          Value: Public
+      VpcId: !Ref Vpc
+
+  NatEIP2:
+    Condition: AZ2
+    Type: AWS::EC2::EIP
+    Properties:
+      Domain: vpc
+  NatGateway2:
+    Condition: AZ2
+    Type: AWS::EC2::NatGateway
+    DependsOn: AttachInternetGateway
+    Properties:
+      AllocationId: !GetAtt NatEIP2.AllocationId
+      SubnetId: !Ref PublicSubnet2
+  NatRoute2:
+    Condition: AZ2
+    Type: AWS::EC2::Route
+    Properties:
+      RouteTableId: !Ref NatRouteTable2
+      DestinationCidrBlock: 0.0.0.0/0
+      NatGatewayId: !Ref NatGateway2
+  NatRouteTable2:
+    Condition: AZ2
+    Type: AWS::EC2::RouteTable
+    Properties:
+      Tags:
+        - Key: Name
+          Value: !Join [ '', [ 'NatRouteTable2 / ', !Ref 'AWS::StackName' ] ]
+        - Key: Network
+          Value: Public
+      VpcId: !Ref Vpc
+
+  NatEIP3:
+    Condition: AZ3
+    Type: AWS::EC2::EIP
+    Properties:
+      Domain: vpc
+  NatGateway3:
+    Condition: AZ3
+    Type: AWS::EC2::NatGateway
+    DependsOn: AttachInternetGateway
+    Properties:
+      AllocationId: !GetAtt NatEIP3.AllocationId
+      SubnetId: !Ref PublicSubnet3
+  NatRoute3:
+    Condition: AZ3
+    Type: AWS::EC2::Route
+    Properties:
+      RouteTableId: !Ref NatRouteTable3
+      DestinationCidrBlock: 0.0.0.0/0
+      NatGatewayId: !Ref NatGateway3
+  NatRouteTable3:
+    Condition: AZ3
+    Type: AWS::EC2::RouteTable
+    Properties:
+      Tags:
+        - Key: Name
+          Value: !Join [ '', [ 'NatRouteTable3 / ', !Ref 'AWS::StackName' ] ]
+        - Key: Network
+          Value: Public
+      VpcId: !Ref Vpc
+
+  NatEIP4:
+    Condition: AZ4
+    Type: AWS::EC2::EIP
+    Properties:
+      Domain: vpc
+  NatGateway4:
+    Condition: AZ4
+    Type: AWS::EC2::NatGateway
+    DependsOn: AttachInternetGateway
+    Properties:
+      AllocationId: !GetAtt NatEIP4.AllocationId
+      SubnetId: !Ref PublicSubnet4
+  NatRoute4:
+    Condition: AZ4
+    Type: AWS::EC2::Route
+    Properties:
+      RouteTableId: !Ref NatRouteTable4
+      DestinationCidrBlock: 0.0.0.0/0
+      NatGatewayId: !Ref NatGateway4
+  NatRouteTable4:
+    Condition: AZ4
+    Type: AWS::EC2::RouteTable
+    Properties:
+      Tags:
+        - Key: Name
+          Value: !Join [ '', [ 'NatRouteTable4 / ', !Ref 'AWS::StackName' ] ]
+        - Key: Network
+          Value: Public
+      VpcId: !Ref Vpc
+
+  NatEIP5:
+    Condition: AZ5
+    Type: AWS::EC2::EIP
+    Properties:
+      Domain: vpc
+  NatGateway5:
+    Condition: AZ5
+    Type: AWS::EC2::NatGateway
+    DependsOn: AttachInternetGateway
+    Properties:
+      AllocationId: !GetAtt NatEIP5.AllocationId
+      SubnetId: !Ref PublicSubnet5
+  NatRoute5:
+    Condition: AZ5
+    Type: AWS::EC2::Route
+    Properties:
+      RouteTableId: !Ref NatRouteTable5
+      DestinationCidrBlock: 0.0.0.0/0
+      NatGatewayId: !Ref NatGateway5
+  NatRouteTable5:
+    Condition: AZ5
+    Type: AWS::EC2::RouteTable
+    Properties:
+      Tags:
+        - Key: Name
+          Value: !Join [ '', [ 'NatRouteTable5 / ', !Ref 'AWS::StackName' ] ]
         - Key: Network
           Value: Public
       VpcId: !Ref Vpc
@@ -474,106 +708,118 @@ Resources:
         - Key: Network
           Value: Public
       VpcId: !Ref Vpc
-  PublicRouteTableAssociation0:    
+  PublicRouteTableAssociation0:
+    Condition: AZ0
     Type: AWS::EC2::SubnetRouteTableAssociation
     Properties:
       SubnetId: !Ref PublicSubnet0
       RouteTableId: !Ref PublicRouteTable
-  PublicRouteTableAssociation1:    
+  PublicRouteTableAssociation1:
+    Condition: AZ1
     Type: AWS::EC2::SubnetRouteTableAssociation
     Properties:
       SubnetId: !Ref PublicSubnet1
       RouteTableId: !Ref PublicRouteTable
-  PublicRouteTableAssociation2:    
+  PublicRouteTableAssociation2:
+    Condition: AZ2
     Type: AWS::EC2::SubnetRouteTableAssociation
     Properties:
       SubnetId: !Ref PublicSubnet2
       RouteTableId: !Ref PublicRouteTable
-  PublicRouteTableAssociation3:    
+  PublicRouteTableAssociation3:
+    Condition: AZ3
     Type: AWS::EC2::SubnetRouteTableAssociation
     Properties:
       SubnetId: !Ref PublicSubnet3
       RouteTableId: !Ref PublicRouteTable
-  PublicRouteTableAssociation4:    
+  PublicRouteTableAssociation4:
+    Condition: AZ4
     Type: AWS::EC2::SubnetRouteTableAssociation
     Properties:
       SubnetId: !Ref PublicSubnet4
       RouteTableId: !Ref PublicRouteTable
-  PublicRouteTableAssociation5:    
+  PublicRouteTableAssociation5:
+    Condition: AZ5
     Type: AWS::EC2::SubnetRouteTableAssociation
     Properties:
       SubnetId: !Ref PublicSubnet5
       RouteTableId: !Ref PublicRouteTable            
 
-  PublicSubnet0:    
+  PublicSubnet0:
+    Condition: AZ0
     Type: AWS::EC2::Subnet
     Properties:
-      AvailabilityZone: eu-west-3a
+      AvailabilityZone: !Select [ 0, !Ref AvailabilityZones ]
       CidrBlock: !Ref PublicSubnet0Cidr
       MapPublicIpOnLaunch: true
       Tags:
         - Key: Name
-          Value: !Join [ '', [ 'Public Frontend A ', !Ref 'AWS::StackName' ] ]
+          Value: !Join [ '', [ 'PublicSubnet0 / ', !Ref 'AWS::StackName' ] ]
         - Key: SubnetType
           Value: Public
       VpcId: !Ref Vpc
-  PublicSubnet1:    
+  PublicSubnet1:
+    Condition: AZ1
     Type: AWS::EC2::Subnet
     Properties:
-      AvailabilityZone: eu-west-3b
+      AvailabilityZone: !Select [ 1, !Ref AvailabilityZones ]
       CidrBlock: !Ref PublicSubnet1Cidr
       MapPublicIpOnLaunch: true
       Tags:
         - Key: Name
-          Value: !Join [ '', [ 'Public Frontend B ', !Ref 'AWS::StackName' ] ]
+          Value: !Join [ '', [ 'PublicSubnet1 / ', !Ref 'AWS::StackName' ] ]
         - Key: SubnetType
           Value: Public
       VpcId: !Ref Vpc
-  PublicSubnet2:    
+  PublicSubnet2:
+    Condition: AZ2
     Type: AWS::EC2::Subnet
     Properties:
-      AvailabilityZone: eu-west-3c
+      AvailabilityZone: !Select [ 2, !Ref AvailabilityZones ]
       CidrBlock: !Ref PublicSubnet2Cidr
       MapPublicIpOnLaunch: true
       Tags:
         - Key: Name
-          Value: !Join [ '', [ 'Public Frontend C ', !Ref 'AWS::StackName' ] ]
+          Value: !Join [ '', [ 'PublicSubnet2 / ', !Ref 'AWS::StackName' ] ]
         - Key: SubnetType
           Value: Public
       VpcId: !Ref Vpc
-  PublicSubnet3:    
+  PublicSubnet3:
+    Condition: AZ3
     Type: AWS::EC2::Subnet
     Properties:
-      AvailabilityZone: eu-west-3a
+      AvailabilityZone: !Select [ 3, !Ref AvailabilityZones ]
       CidrBlock: !Ref PublicSubnet3Cidr
       MapPublicIpOnLaunch: true
       Tags:
         - Key: Name
-          Value: !Join [ '', [ 'Private Frontend A ', !Ref 'AWS::StackName' ] ]
+          Value: !Join [ '', [ 'PublicSubnet3 / ', !Ref 'AWS::StackName' ] ]
         - Key: SubnetType
           Value: Public
       VpcId: !Ref Vpc
-  PublicSubnet4:    
+  PublicSubnet4:
+    Condition: AZ4
     Type: AWS::EC2::Subnet
     Properties:
-      AvailabilityZone: eu-west-3b
+      AvailabilityZone: !Select [ 4, !Ref AvailabilityZones ]
       CidrBlock: !Ref PublicSubnet4Cidr
       MapPublicIpOnLaunch: true
       Tags:
         - Key: Name
-          Value: !Join [ '', [ 'Private Frontend B ', !Ref 'AWS::StackName' ] ]
+          Value: !Join [ '', [ 'PublicSubnet4 / ', !Ref 'AWS::StackName' ] ]
         - Key: SubnetType
           Value: Public
       VpcId: !Ref Vpc
-  PublicSubnet5:    
+  PublicSubnet5:
+    Condition: AZ5
     Type: AWS::EC2::Subnet
     Properties:
-      AvailabilityZone: eu-west-3c
+      AvailabilityZone: !Select [ 5, !Ref AvailabilityZones ]
       CidrBlock: !Ref PublicSubnet5Cidr
       MapPublicIpOnLaunch: true
       Tags:
         - Key: Name
-          Value: !Join [ '', [ 'Private Frontend C ', !Ref 'AWS::StackName' ] ]
+          Value: !Join [ '', [ 'PublicSubnet5 / ', !Ref 'AWS::StackName' ] ]
         - Key: SubnetType
           Value: Public
       VpcId: !Ref Vpc
@@ -625,53 +871,132 @@ Resources:
                 Resource: '*'
 
 Outputs:
+  
   Vpc:
     Value: !Ref Vpc
   VpcCidr:
     Value: !Ref VpcCidr
-  PublicSubnet0:    
+  PublicSubnet0:
+    Condition: AZ0
     Value: !Ref PublicSubnet0
-  PublicSubnet1:    
+  PublicSubnet1:
+    Condition: AZ1
     Value: !Ref PublicSubnet1
-  PublicSubnet2:    
+  PublicSubnet2:
+    Condition: AZ2
     Value: !Ref PublicSubnet2
-  PublicSubnet3:    
+  PublicSubnet3:
+    Condition: AZ3
     Value: !Ref PublicSubnet3
-  PublicSubnet4:    
+  PublicSubnet4:
+    Condition: AZ4
     Value: !Ref PublicSubnet4  
-  PublicSubnet5:    
+  PublicSubnet5:
+    Condition: AZ5
     Value: !Ref PublicSubnet5
-  WebSubnet0:    
+  WebSubnet0:
+    Condition: AZ0
     Value: !Ref WebSubnet0
-  WebSubnet1:    
+  WebSubnet1:
+    Condition: AZ1
     Value: !Ref WebSubnet1
-  WebSubnet2:    
+  WebSubnet2:
+    Condition: AZ2
     Value: !Ref WebSubnet2
-  WebSubnet3:    
+  WebSubnet3:
+    Condition: AZ3
     Value: !Ref WebSubnet3
-  WebSubnet4:    
+  WebSubnet4:
+    Condition: AZ4
     Value: !Ref WebSubnet4   
-  WebSubnet5:    
+  WebSubnet5:
+    Condition: AZ5
     Value: !Ref WebSubnet5
-  DataSubnet0:    
+  DataSubnet0:
+    Condition: AZ0
     Value: !Ref DataSubnet0
-  DataSubnet1:    
+  DataSubnet1:
+    Condition: AZ1
     Value: !Ref DataSubnet1
-  DataSubnet2:    
+  DataSubnet2:
+    Condition: AZ2
     Value: !Ref DataSubnet2
-  DataSubnet3:    
+  DataSubnet3:
+    Condition: AZ3
     Value: !Ref DataSubnet3
-  DataSubnet4:    
+  DataSubnet4:
+    Condition: AZ4
     Value: !Ref DataSubnet4  
-  DataSubnet5:    
+  DataSubnet5:
+    Condition: AZ5
     Value: !Ref DataSubnet5
   DataSubnet:
     Value:
-      !Join [ ',', [ !Ref DataSubnet0, !Ref DataSubnet1, !Ref DataSubnet2, !Ref DataSubnet3, !Ref DataSubnet4, !Ref DataSubnet5 ] ]
+      !If
+        [ NumberOfAZs1,
+        !Ref DataSubnet0,
+        !If
+          [ NumberOfAZs2,
+          !Join [ ',', [ !Ref DataSubnet0, !Ref DataSubnet1 ] ],
+          !If
+            [ NumberOfAZs3,
+            !Join [ ',', [ !Ref DataSubnet0, !Ref DataSubnet1, !Ref DataSubnet2 ] ],
+            !If
+              [ NumberOfAZs4,
+              !Join [ ',', [ !Ref DataSubnet0, !Ref DataSubnet1, !Ref DataSubnet2, !Ref DataSubnet3 ] ],
+              !If
+                [ NumberOfAZs5,
+                !Join [ ',', [ !Ref DataSubnet0, !Ref DataSubnet1, !Ref DataSubnet2, !Ref DataSubnet3, !Ref DataSubnet4 ] ],
+                !Join [ ',', [ !Ref DataSubnet0, !Ref DataSubnet1, !Ref DataSubnet2, !Ref DataSubnet3, !Ref DataSubnet4, !Ref DataSubnet5 ] ]
+                ]
+              ]
+            ]
+          ]
+        ] 
   WebSubnet:
     Value:
-      !Join [ ',', [ !Ref WebSubnet0, !Ref WebSubnet1, !Ref WebSubnet2, !Ref WebSubnet3, !Ref WebSubnet4, !Ref WebSubnet5 ] ]
+      !If
+        [ NumberOfAZs1,
+        !Ref WebSubnet0,
+        !If
+          [ NumberOfAZs2,
+          !Join [ ',', [ !Ref WebSubnet0, !Ref WebSubnet1 ] ],
+          !If
+            [ NumberOfAZs3,
+            !Join [ ',', [ !Ref WebSubnet0, !Ref WebSubnet1, !Ref WebSubnet2 ] ],
+            !If
+              [ NumberOfAZs4,
+              !Join [ ',', [ !Ref WebSubnet0, !Ref WebSubnet1, !Ref WebSubnet2, !Ref WebSubnet3 ] ],
+              !If
+                [ NumberOfAZs5,
+                !Join [ ',', [ !Ref WebSubnet0, !Ref WebSubnet1, !Ref WebSubnet2, !Ref WebSubnet3, !Ref WebSubnet4 ] ],
+                !Join [ ',', [ !Ref WebSubnet0, !Ref WebSubnet1, !Ref WebSubnet2, !Ref WebSubnet3, !Ref WebSubnet4, !Ref WebSubnet5 ] ]
+                ]
+              ]
+            ]
+          ]
+        ] 
   PublicSubnet:
     Value:
-      !Join [ ',', [ !Ref PublicSubnet0, !Ref PublicSubnet1, !Ref PublicSubnet2, !Ref PublicSubnet3, !Ref PublicSubnet4, !Ref PublicSubnet5 ] ]
+      !If
+        [ NumberOfAZs1,
+        !Ref PublicSubnet0,
+        !If
+          [ NumberOfAZs2,
+          !Join [ ',', [ !Ref PublicSubnet0, !Ref PublicSubnet1 ] ],
+          !If
+            [ NumberOfAZs3,
+            !Join [ ',', [ !Ref PublicSubnet0, !Ref PublicSubnet1, !Ref PublicSubnet2 ] ],
+            !If
+              [ NumberOfAZs4,
+              !Join [ ',', [ !Ref PublicSubnet0, !Ref PublicSubnet1, !Ref PublicSubnet2, !Ref PublicSubnet3 ] ],
+              !If
+                [ NumberOfAZs5,
+                !Join [ ',', [ !Ref PublicSubnet0, !Ref PublicSubnet1, !Ref PublicSubnet2, !Ref PublicSubnet3, !Ref PublicSubnet4 ] ],
+                !Join [ ',', [ !Ref PublicSubnet0, !Ref PublicSubnet1, !Ref PublicSubnet2, !Ref PublicSubnet3, !Ref PublicSubnet4, !Ref PublicSubnet5 ] ]
+                ]
+              ]
+            ]
+          ]
+        ] 
 

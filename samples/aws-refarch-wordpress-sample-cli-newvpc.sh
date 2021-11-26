@@ -1,8 +1,8 @@
 aws cloudformation create-stack \
  --stack-name WordPress \
- --template-body https://s3.amazonaws.com/aws-refarch/wordpress/latest/templates/aws-refarch-wordpress-master-newvpc.yaml \
+ --template-body file:///home/fab/Public/gitfolder/aws-refarch-wordpress/templates/aws-refarch-wordpress-master-newvpc.yaml \
  --parameters file://aws-refarch-wordpress-parameters-newvpc.json \
  --capabilities CAPABILITY_IAM \
  --disable-rollback \
- --region us-east-1 \
+ --region eu-west-3 \
  --output json
