@@ -425,7 +425,7 @@ Resources:
     Properties:
       Tags:
         - Key: Name
-          Value: !Join [ '', [ 'InternetGateway / ', !Ref 'AWS::StackName' ] ]
+          Value: !Join [ '', [ 'InternetGateway ', !Ref 'AWS::StackName' ] ]
   AttachInternetGateway:
     Type: AWS::EC2::VPCGatewayAttachment
     Properties:
@@ -440,6 +440,9 @@ Resources:
     Type: AWS::EC2::NatGateway
     DependsOn: AttachInternetGateway
     Properties:
+      Tags:
+        - Key: Name
+        - Value: !Join [ '', ['NatGateway ', !Ref 'AWS::StackName' ] ]
       AllocationId: !GetAtt NatEIP0.AllocationId
       SubnetId: !Ref PublicSubnet0
   NatRoute0:    
@@ -453,7 +456,7 @@ Resources:
     Properties:
       Tags:
         - Key: Name
-          Value: !Join [ '', ['NatRouteTable0 / ', !Ref 'AWS::StackName' ] ]
+          Value: !Join [ '', ['NatRouteTable0 ', !Ref 'AWS::StackName' ] ]
         - Key: Network
           Value: Public
       VpcId: !Ref Vpc
@@ -470,7 +473,7 @@ Resources:
     Properties:
       Tags:
         - Key: Name
-          Value: !Join [ '', [ 'PublicRouteTable / ', !Ref 'AWS::StackName' ] ]
+          Value: !Join [ '', [ 'PublicRouteTable ', !Ref 'AWS::StackName' ] ]
         - Key: Network
           Value: Public
       VpcId: !Ref Vpc
@@ -586,7 +589,7 @@ Resources:
       EnableDnsSupport: true
       Tags:
         - Key: Name
-          Value: !Join [ '', [ 'Vpc / ', !Ref 'AWS::StackName' ] ]
+          Value: !Join [ '', [ 'Vpc ', !Ref 'AWS::StackName' ] ]
   VpcFlowLog:
     Type: AWS::EC2::FlowLog
     Properties:

@@ -230,7 +230,9 @@ Mappings:
     eu-west-1:
       AMI: ami-acd005d5
     eu-west-2:
-      AMI: ami-1a7f6d7e
+      AMI: ami-acd005d5
+    eu-west-3:
+      AMI: ami-00bf323ac99d8bbbb
     sa-east-1:
       AMI: ami-f1344b9d
     us-east-1:
@@ -573,7 +575,7 @@ Resources:
       FunctionName: !Join [ '', [ 'efs-', !Ref ElasticFileSystem, '-size-monitor' ] ]
       Handler: index.handler
       Role: !GetAtt LambdaRole.Arn
-      Runtime: python2.7
+      Runtime: python3.9
       Timeout: 60
   LambdaRole:
     Type: AWS::IAM::Role
