@@ -277,7 +277,7 @@ Parameters:
     - p3.8xlarge 
     - p3.16xlarge
     ConstraintDescription: Must be a valid Amazon EC2 instance type.
-    Default: t3.large
+    Default: t3.nano
     Description: The Amazon EC2 instance type for your web instances.
     Type: String
   WebSecurityGroup:
@@ -445,6 +445,9 @@ Resources:
             - logs:DescribeLogStreams
             Resource:
             - arn:aws:logs:*:*:*
+      	ManagedPolicyArns: 
+        	- arn:aws:iam::aws:policy/AmazonSSMManagedInstanceCore
+      	RoleName: CFWebInstanceRole
   WebAutoScalingGroup:
     Type: AWS::AutoScaling::AutoScalingGroup
     Properties:
@@ -702,7 +705,7 @@ Resources:
             mkdir -p /var/www/wordpress
             mount -t nfs4 -o nfsvers=4.1,rsize=1048576,wsize=1048576,hard,timeo=600,retrans=2 ${ElasticFileSystem}.efs.${AWS::Region}.amazonaws.com:/ /var/www/wordpress
             /opt/aws/bin/cfn-init --configsets deploy_webserver --verbose --stack ${AWS::StackName} --resource WebLaunchConfiguration55 --region ${AWS::Region}
-#            /opt/aws/bin/cfn-signal --exit-code $? --stack ${AWS::StackName} --resource WebAutoScalingGroup --region ${AWS::Region}
+            /opt/aws/bin/cfn-signal --exit-code $? --stack ${AWS::StackName} --resource WebAutoScalingGroup --region ${AWS::Region}
   WebLaunchConfiguration56:
     Condition: PHP56
     Type: AWS::AutoScaling::LaunchConfiguration
@@ -910,7 +913,7 @@ Resources:
             mkdir -p /var/www/wordpress
             mount -t nfs4 -o nfsvers=4.1,rsize=1048576,wsize=1048576,hard,timeo=600,retrans=2 ${ElasticFileSystem}.efs.${AWS::Region}.amazonaws.com:/ /var/www/wordpress
             /opt/aws/bin/cfn-init --configsets deploy_webserver --verbose --stack ${AWS::StackName} --resource WebLaunchConfiguration56 --region ${AWS::Region}
-#            /opt/aws/bin/cfn-signal --exit-code $? --stack ${AWS::StackName} --resource WebAutoScalingGroup --region ${AWS::Region}
+            /opt/aws/bin/cfn-signal --exit-code $? --stack ${AWS::StackName} --resource WebAutoScalingGroup --region ${AWS::Region}
   WebLaunchConfiguration70:
     Condition: PHP70
     Type: AWS::AutoScaling::LaunchConfiguration
