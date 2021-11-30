@@ -445,9 +445,9 @@ Resources:
             - logs:DescribeLogStreams
             Resource:
             - arn:aws:logs:*:*:*
-      	ManagedPolicyArns: 
-        	- arn:aws:iam::aws:policy/AmazonSSMManagedInstanceCore
-      	RoleName: CFWebInstanceRole
+      ManagedPolicyArns: 
+        - arn:aws:iam::aws:policy/AmazonSSMManagedInstanceCore
+      RoleName: CFWebInstanceRole
   WebAutoScalingGroup:
     Type: AWS::AutoScaling::AutoScalingGroup
     Properties:
@@ -455,20 +455,12 @@ Resources:
       HealthCheckGracePeriod: 120
       HealthCheckType: ELB
       LaunchConfigurationName:
-        !If
-          [ PHP55,
-          !Ref WebLaunchConfiguration55,
-          !If
-            [ PHP56,
-            !Ref WebLaunchConfiguration56,
-            !Ref WebLaunchConfiguration70
-            ]          
-          ]
+        !Ref WebLaunchConfiguration70
       MaxSize: !Ref WebAsgMax
       MinSize: !Ref WebAsgMin
       Tags:
         - Key: Name
-          Value: !Join [ '', [ 'Web ASG / ', !Ref 'AWS::StackName' ] ]
+          Value: !Join [ '', [ 'Web ASG ', !Ref 'AWS::StackName' ] ]
           PropagateAtLaunch: true
       TargetGroupARNs:
         - !Ref PublicAlbTargetGroupArn
@@ -494,426 +486,10 @@ Resources:
               ]
             ]
           ]
-#    CreationPolicy:
-#      ResourceSignal:
-#        Count: !Ref WebAsgMin
-#        Timeout: PT5M
-  WebLaunchConfiguration55:
-    Condition: PHP55
-    Type: AWS::AutoScaling::LaunchConfiguration
-    Metadata:
-      AWS::CloudFormation::Init:
-        configSets:
-          deploy_webserver:
-            - install_webserver
-            - build_cacheclient
-            - build_wordpress
-            - build_opcache
-            - download_aws_ini
-            - install_aws_ini
-            - install_cacheclient
-            - install_wordpress
-            - install_opcache
-            - start_webserver
-        install_webserver:
-          packages:
-            yum:
-              awslogs: []
-              httpd24: []
-              mysql56: []
-              php55: []
-              php55-devel: []
-              php55-pear: []
-              php55-mysqlnd: []
-          files:
-            /tmp/create_site_conf.sh:
-              content:
-                !Join [
-                  "",[
-                    "#!/bin/bash -xe\n",
-                    "if [ ! -f /etc/httpd/conf.d/", !Ref WPDirectory, ".conf ]; then\n",                    
-                    "   touch /etc/httpd/conf.d/", !Ref WPDirectory, ".conf\n",
-                    "   echo 'ServerName 127.0.0.1:80' >> /etc/httpd/conf.d/", !Ref WPDirectory, ".conf\n",
-                    "   echo 'DocumentRoot /var/www/wordpress/", !Ref WPDirectory, "' >> /etc/httpd/conf.d/", !Ref WPDirectory, ".conf\n",
-                    "   echo '<Directory /var/www/wordpress/", !Ref WPDirectory, ">' >> /etc/httpd/conf.d/", !Ref WPDirectory, ".conf\n",
-                    "   echo '  Options Indexes FollowSymLinks' >> /etc/httpd/conf.d/", !Ref WPDirectory, ".conf\n",
-                    "   echo '  AllowOverride All' >> /etc/httpd/conf.d/", !Ref WPDirectory, ".conf\n",
-                    "   echo '  Require all granted' >> /etc/httpd/conf.d/", !Ref WPDirectory, ".conf\n",
-                    "   echo '</Directory>' >> /etc/httpd/conf.d/", !Ref WPDirectory, ".conf\n",
-                    "fi\n"
-                  ]
-                ]
-              mode: 000500
-              owner: root
-              group: root
-          commands:
-            create_site_conf:
-              command: ./create_site_conf.sh
-              cwd: /tmp
-              ignoreErrors: false
-        build_cacheclient:
-          packages:
-            yum:
-              gcc-c++: []  
-          files:
-            /tmp/install_cacheclient.sh:
-              content:
-                !Sub |
-                  #!/bin/bash -xe
-                  pecl install igbinary
-                  wget -P /tmp/ https://s3.amazonaws.com/aws-refarch/wordpress/latest/bits/AmazonElastiCacheClusterClient-1.0.1-PHP55-64bit.tgz
-                  tar -xf '/tmp/AmazonElastiCacheClusterClient-1.0.1-PHP55-64bit.tgz'
-                  cp '/tmp/AmazonElastiCacheClusterClient-1.0.0/amazon-elasticache-cluster-client.so' /usr/lib64/php/5.5/modules/
-                  if [ ! -f /etc/php-5.5.d/50-memcached.ini ]; then
-                      touch /etc/php-5.5.d/50-memcached.ini
-                  fi
-                  echo 'extension=igbinary.so;' >> /etc/php-5.5.d/50-memcached.ini
-                  echo 'extension=/usr/lib64/php/5.5/modules/amazon-elasticache-cluster-client.so;' >> /etc/php-5.5.d/50-memcached.ini
-              mode: 000500
-              owner: root
-              group: root
-        build_opcache:
-          packages:
-            yum:
-              php55-opcache: []
-          files:
-            /tmp/install_opcache.sh:
-              content:
-                !Sub |
-                  #!/bin/bash -xe
-                  # create hidden opcache directory locally & change owner to apache
-                  if [ ! -d /var/www/.opcache ]; then                    
-                      mkdir -p /var/www/.opcache
-                  fi
-                  # enable opcache in /etc/php-5.5.d/opcache.ini
-                  sed -i 's/;opcache.file_cache=.*/opcache.file_cache=\/var\/www\/.opcache/' /etc/php-5.5.d/opcache.ini
-                  sed -i 's/opcache.memory_consumption=.*/opcache.memory_consumption=512/' /etc/php-5.5.d/opcache.ini
-                  # download opcache-instance.php to verify opcache status
-                  if [ ! -f /var/www/wordpress/${WPDirectory}/opcache-instanceid.php ]; then
-                      wget -P /var/www/wordpress/${WPDirectory}/ https://s3.amazonaws.com/aws-refarch/wordpress/latest/bits/opcache-instanceid.php
-                  fi
-              mode: 000500
-              owner: root
-              group: root
-        build_wordpress:
-          files:
-            /tmp/install_wordpress.sh:
-              content:
-                !Join [
-                  "",[
-                    "#!/bin/bash -xe\n",
-                    "\n",
-                    "# install wp-cli\n",
-                    "if [ ! -f /bin/wp/wp-cli.phar ]; then\n",
-                    "   curl -o /bin/wp https://raw.githubusercontent.com/wp-cli/builds/gh-pages/phar/wp-cli.phar\n",
-                    "   chmod +x /bin/wp\n",
-                    "fi\n",
-                    "\n",
-                    "# make site directory\n",
-                    "if [ ! -d /var/www/wordpress/", !Ref WPDirectory, " ]; then\n",                    
-                    "   mkdir -p /var/www/wordpress/", !Ref WPDirectory, "\n",
-                    "\n",
-                    "   cd /var/www/wordpress/", !Ref WPDirectory, "\n",
-                    "   # install wordpress if not installed\n",
-                    "   # use public alb host name if wp domain name was empty\n",
-                    "   if ! $(wp core is-installed --allow-root); then\n",
-                    "       wp core download --version='", !Ref WPVersion, "' --locale='", !Ref WPLocale, "' --allow-root\n",  
-                    "       wp core config --dbname='", !Ref DatabaseName, "' --dbuser='", !Ref DatabaseMasterUsername, "' --dbpass='", !Ref DatabaseMasterPassword, "' --dbhost='", !Ref DatabaseClusterEndpointAddress, "' --dbprefix=wp_ --allow-root\n",
-                    "       wp core install --url=", !If [ NoWPDomainName, !Ref PublicAlbHostname, !Join [ "", [ "'http://www.", !Ref WPDomainName, "'" ] ] ], " --title='", !Ref WPTitle, "' --admin_user='", !Ref WPAdminUsername, "' --admin_password='", !Ref WPAdminPassword, "' --admin_email='", !Ref WPAdminEmail, "' --skip-email --allow-root\n",
-                    "       wp plugin install w3-total-cache\n",
-                    "       sed -i \"/$table_prefix = 'wp_';/ a \\define('WP_HOME', 'http://' . \\$_SERVER['HTTP_HOST']); \" /var/www/wordpress/", !Ref WPDirectory, "/wp-config.php\n",
-                    "       sed -i \"/$table_prefix = 'wp_';/ a \\define('WP_SITEURL', 'http://' . \\$_SERVER['HTTP_HOST']); \" /var/www/wordpress/", !Ref WPDirectory, "/wp-config.php\n",
-                    "       # enable HTTPS in wp-config.php if ACM Public SSL Certificate parameter was not empty\n",
-                            !If [ NoSslCertificate, !Join [ '', [ "       sed -i \"/$table_prefix = 'wp_';/ a \\# No ACM Public SSL Certificate \" /var/www/wordpress/", !Ref WPDirectory, "/wp-config.php\n" ] ] , !Join [ '', [ "       sed -i \"/$table_prefix = 'wp_';/ a \\$_SERVER['HTTPS'] = 'on';\" /var/www/wordpress/", !Ref WPDirectory, "/wp-config.php\n" ] ] ],
-                    "\n",
-                    "       # set permissions of wordpress site directories\n", 
-                    "       chown -R apache:apache /var/www/wordpress/", !Ref WPDirectory, "\n",
-                    "       chmod u+wrx /var/www/wordpress/", !Ref WPDirectory, "/wp-content/*\n",
-                    "       if [ ! -f /var/www/wordpress/", !Ref WPDirectory, "/opcache-instanceid.php ]; then\n",
-                    "         wget -P /var/www/wordpress/", !Ref WPDirectory, "/ https://s3.amazonaws.com/aws-refarch/wordpress/latest/bits/opcache-instanceid.php\n",
-                    "       fi\n",
-                    "   fi\n",
-                    "   RESULT=$?\n",
-                    "   if [ $RESULT -eq 0 ]; then\n",
-                    "       touch /var/www/wordpress/", !Ref WPDirectory, "/wordpress.initialized\n",
-                    "         else\n",
-                    "       touch /var/www/wordpress/", !Ref WPDirectory, "/wordpress.failed\n",
-                    "   fi\n",
-                    "fi\n"
-                  ]
-                ]
-              mode: 000500
-              owner: root
-              group: root
-        download_aws_ini: 
-          files:
-            /tmp/download_aws_ini.sh:
-              content:
-                !Join [
-                  "",[
-                    "#!/bin/bash -x\n",
-                    "\n",
-                    "wget -P /etc/php-5.5.d/ ", !Ref PHPIniOverride, "\n"
-                  ]
-                ]
-              mode: 000500
-              owner: root
-              group: root
-        install_aws_ini:
-          commands:
-            install_aws_ini:
-              command: ./download_aws_ini.sh
-              cwd: /tmp
-              ignoreErrors: true
-        install_wordpress:
-          commands:
-            install_wordpress:
-              command: ./install_wordpress.sh
-              cwd: /tmp
-              ignoreErrors: false          
-        install_cacheclient:
-          commands:
-            install_cacheclient:
-              command: ./install_cacheclient.sh
-              cwd: /tmp
-              ignoreErrors: false
-        install_opcache:
-          commands:
-            install_opcache:
-              command: ./install_opcache.sh
-              cwd: /tmp
-              ignoreErrors: false
-        start_webserver:
-          services:
-            sysvinit:
-              httpd:
-                enabled: true
-                ensureRunning: true
-    Properties:
-      IamInstanceProfile: !Ref WebInstanceProfile
-      ImageId: !FindInMap [ RegionMap, !Ref 'AWS::Region', AMI ]
-      InstanceMonitoring: true
-      InstanceType: !Ref WebInstanceType
-      KeyName: !Ref EC2KeyName
-      SecurityGroups:
-      - !Ref WebSecurityGroup
-      UserData:
-        "Fn::Base64":
-          !Sub |
-            #!/bin/bash -xe
-            yum update -y
-            mkdir -p /var/www/wordpress
-            mount -t nfs4 -o nfsvers=4.1,rsize=1048576,wsize=1048576,hard,timeo=600,retrans=2 ${ElasticFileSystem}.efs.${AWS::Region}.amazonaws.com:/ /var/www/wordpress
-            /opt/aws/bin/cfn-init --configsets deploy_webserver --verbose --stack ${AWS::StackName} --resource WebLaunchConfiguration55 --region ${AWS::Region}
-            /opt/aws/bin/cfn-signal --exit-code $? --stack ${AWS::StackName} --resource WebAutoScalingGroup --region ${AWS::Region}
-  WebLaunchConfiguration56:
-    Condition: PHP56
-    Type: AWS::AutoScaling::LaunchConfiguration
-    Metadata:
-      AWS::CloudFormation::Init:
-        configSets:
-          deploy_webserver:
-            - install_webserver
-            - build_cacheclient
-            - build_wordpress
-            - build_opcache
-            - download_aws_ini
-            - install_aws_ini
-            - install_cacheclient
-            - install_wordpress
-            - install_opcache
-            - start_webserver
-        install_webserver:
-          packages:
-            yum:
-              awslogs: []
-              httpd24: []
-              mysql56: []
-              php56: []
-              php56-devel: []
-              php56-pear: []
-              php56-mysqlnd: []
-          files:
-            /tmp/create_site_conf.sh:
-              content:
-                !Join [
-                  "",[
-                    "#!/bin/bash -xe\n",
-                    "if [ ! -f /etc/httpd/conf.d/", !Ref WPDirectory, ".conf ]; then\n",                    
-                    "   touch /etc/httpd/conf.d/", !Ref WPDirectory, ".conf\n",
-                    "   echo 'ServerName 127.0.0.1:80' >> /etc/httpd/conf.d/", !Ref WPDirectory, ".conf\n",
-                    "   echo 'DocumentRoot /var/www/wordpress/", !Ref WPDirectory, "' >> /etc/httpd/conf.d/", !Ref WPDirectory, ".conf\n",
-                    "   echo '<Directory /var/www/wordpress/", !Ref WPDirectory, ">' >> /etc/httpd/conf.d/", !Ref WPDirectory, ".conf\n",
-                    "   echo '  Options Indexes FollowSymLinks' >> /etc/httpd/conf.d/", !Ref WPDirectory, ".conf\n",
-                    "   echo '  AllowOverride All' >> /etc/httpd/conf.d/", !Ref WPDirectory, ".conf\n",
-                    "   echo '  Require all granted' >> /etc/httpd/conf.d/", !Ref WPDirectory, ".conf\n",
-                    "   echo '</Directory>' >> /etc/httpd/conf.d/", !Ref WPDirectory, ".conf\n",
-                    "fi\n"
-                  ]
-                ]
-              mode: 000500
-              owner: root
-              group: root
-          commands:
-            create_site_conf:
-              command: ./create_site_conf.sh
-              cwd: /tmp
-              ignoreErrors: false
-        build_cacheclient:
-          packages:
-            yum:
-              gcc-c++: []  
-          files:
-            /tmp/install_cacheclient.sh:
-              content:
-                !Sub |
-                  #!/bin/bash -xe
-                  pecl install igbinary
-                  wget -P /tmp/ https://s3.amazonaws.com/aws-refarch/wordpress/latest/bits/AmazonElastiCacheClusterClient-1.0.0-PHP56-64bit.tgz
-                  tar -xf '/tmp/AmazonElastiCacheClusterClient-1.0.0-PHP56-64bit.tgz'
-                  cp '/tmp/AmazonElastiCacheClusterClient-1.0.0/amazon-elasticache-cluster-client.so' /usr/lib64/php/5.6/modules/
-                  if [ ! -f /etc/php-5.6.d/50-memcached.ini ]; then
-                      touch /etc/php-5.6.d/50-memcached.ini
-                  fi
-                  echo 'extension=igbinary.so;' >> /etc/php-5.6.d/50-memcached.ini
-                  echo 'extension=/usr/lib64/php/5.6/modules/amazon-elasticache-cluster-client.so;' >> /etc/php-5.6.d/50-memcached.ini
-              mode: 000500
-              owner: root
-              group: root
-        build_opcache:
-          packages:
-            yum:
-              php56-opcache: []
-          files:
-            /tmp/install_opcache.sh:
-              content:
-                !Sub |
-                  #!/bin/bash -xe
-                  # create hidden opcache directory locally & change owner to apache
-                  if [ ! -d /var/www/.opcache ]; then                    
-                      mkdir -p /var/www/.opcache
-                  fi
-                  # enable opcache in /etc/php-5.6.d/opcache.ini
-                  sed -i 's/;opcache.file_cache=.*/opcache.file_cache=\/var\/www\/.opcache/' /etc/php-5.6.d/10-opcache.ini
-                  sed -i 's/opcache.memory_consumption=.*/opcache.memory_consumption=512/' /etc/php-5.6.d/10-opcache.ini
-                  # download opcache-instance.php to verify opcache status
-                  if [ ! -f /var/www/wordpress/${WPDirectory}/opcache-instanceid.php ]; then
-                      wget -P /var/www/wordpress/${WPDirectory}/ https://s3.amazonaws.com/aws-refarch/wordpress/latest/bits/opcache-instanceid.php
-                  fi
-              mode: 000500
-              owner: root
-              group: root
-        build_wordpress:
-          files:
-            /tmp/install_wordpress.sh:
-              content:
-                !Join [
-                  "",[
-                    "#!/bin/bash -xe\n",
-                    "\n",
-                    "# install wp-cli\n",
-                    "if [ ! -f /bin/wp/wp-cli.phar ]; then\n",
-                    "   curl -o /bin/wp https://raw.githubusercontent.com/wp-cli/builds/gh-pages/phar/wp-cli.phar\n",
-                    "   chmod +x /bin/wp\n",
-                    "fi\n",
-                    "\n",
-                    "# make site directory\n",
-                    "if [ ! -d /var/www/wordpress/", !Ref WPDirectory, " ]; then\n",                    
-                    "   mkdir -p /var/www/wordpress/", !Ref WPDirectory, "\n",
-                    "\n",
-                    "   cd /var/www/wordpress/", !Ref WPDirectory, "\n",
-                    "   # install wordpress if not installed\n",
-                    "   # use public alb host name if wp domain name was empty\n",
-                    "   if ! $(wp core is-installed --allow-root); then\n",
-                    "       wp core download --version='", !Ref WPVersion, "' --locale='", !Ref WPLocale, "' --allow-root\n",  
-                    "       wp core config --dbname='", !Ref DatabaseName, "' --dbuser='", !Ref DatabaseMasterUsername, "' --dbpass='", !Ref DatabaseMasterPassword, "' --dbhost='", !Ref DatabaseClusterEndpointAddress, "' --dbprefix=wp_ --allow-root\n",
-                    "       wp core install --url=", !If [ NoWPDomainName, !Ref PublicAlbHostname, !Join [ "", [ "'http://www.", !Ref WPDomainName, "'" ] ] ], " --title='", !Ref WPTitle, "' --admin_user='", !Ref WPAdminUsername, "' --admin_password='", !Ref WPAdminPassword, "' --admin_email='", !Ref WPAdminEmail, "' --skip-email --allow-root\n",
-                    "       wp plugin install w3-total-cache\n",
-                    "       sed -i \"/$table_prefix = 'wp_';/ a \\define('WP_HOME', 'http://' . \\$_SERVER['HTTP_HOST']); \" /var/www/wordpress/", !Ref WPDirectory, "/wp-config.php\n",
-                    "       sed -i \"/$table_prefix = 'wp_';/ a \\define('WP_SITEURL', 'http://' . \\$_SERVER['HTTP_HOST']); \" /var/www/wordpress/", !Ref WPDirectory, "/wp-config.php\n",
-                    "       # enable HTTPS in wp-config.php if ACM Public SSL Certificate parameter was not empty\n",
-                            !If [ NoSslCertificate, !Join [ '', [ "       sed -i \"/$table_prefix = 'wp_';/ a \\# No ACM Public SSL Certificate \" /var/www/wordpress/", !Ref WPDirectory, "/wp-config.php\n" ] ] , !Join [ '', [ "       sed -i \"/$table_prefix = 'wp_';/ a \\$_SERVER['HTTPS'] = 'on';\" /var/www/wordpress/", !Ref WPDirectory, "/wp-config.php\n" ] ] ],
-                    "\n",
-                    "       # set permissions of wordpress site directories\n", 
-                    "       chown -R apache:apache /var/www/wordpress/", !Ref WPDirectory, "\n",
-                    "       chmod u+wrx /var/www/wordpress/", !Ref WPDirectory, "/wp-content/*\n",
-                    "       if [ ! -f /var/www/wordpress/", !Ref WPDirectory, "/opcache-instanceid.php ]; then\n",
-                    "         wget -P /var/www/wordpress/", !Ref WPDirectory, "/ https://s3.amazonaws.com/aws-refarch/wordpress/latest/bits/opcache-instanceid.php\n",
-                    "       fi\n",
-                    "   fi\n",
-                    "   RESULT=$?\n",
-                    "   if [ $RESULT -eq 0 ]; then\n",
-                    "       touch /var/www/wordpress/", !Ref WPDirectory, "/wordpress.initialized\n",
-                    "         else\n",
-                    "       touch /var/www/wordpress/", !Ref WPDirectory, "/wordpress.failed\n",
-                    "   fi\n",
-                    "fi\n"
-                  ]
-                ]
-              mode: 000500
-              owner: root
-              group: root
-        download_aws_ini: 
-          files:
-            /tmp/download_aws_ini.sh:
-              content:
-                !Join [
-                  "",[
-                    "#!/bin/bash -x\n",
-                    "\n",
-                    "wget -P /etc/php-5.6.d/ ", !Ref PHPIniOverride, "\n"
-                  ]
-                ]
-              mode: 000500
-              owner: root
-              group: root
-        install_aws_ini:
-          commands:
-            install_aws_ini:
-              command: ./download_aws_ini.sh
-              cwd: /tmp
-              ignoreErrors: true
-        install_wordpress:
-          commands:
-            install_wordpress:
-              command: ./install_wordpress.sh
-              cwd: /tmp
-              ignoreErrors: false          
-        install_cacheclient:
-          commands:
-            install_cacheclient:
-              command: ./install_cacheclient.sh
-              cwd: /tmp
-              ignoreErrors: false
-        install_opcache:
-          commands:
-            install_opcache:
-              command: ./install_opcache.sh
-              cwd: /tmp
-              ignoreErrors: false
-        start_webserver:
-          services:
-            sysvinit:
-              httpd:
-                enabled: true
-                ensureRunning: true
-    Properties:
-      IamInstanceProfile: !Ref WebInstanceProfile
-      ImageId: !FindInMap [ RegionMap, !Ref 'AWS::Region', AMI ]
-      InstanceMonitoring: true
-      InstanceType: !Ref WebInstanceType
-      KeyName: !Ref EC2KeyName
-      SecurityGroups:
-      - !Ref WebSecurityGroup
-      UserData:
-        "Fn::Base64":
-          !Sub |
-            #!/bin/bash -xe
-            yum update -y
-            mkdir -p /var/www/wordpress
-            mount -t nfs4 -o nfsvers=4.1,rsize=1048576,wsize=1048576,hard,timeo=600,retrans=2 ${ElasticFileSystem}.efs.${AWS::Region}.amazonaws.com:/ /var/www/wordpress
-            /opt/aws/bin/cfn-init --configsets deploy_webserver --verbose --stack ${AWS::StackName} --resource WebLaunchConfiguration56 --region ${AWS::Region}
-            /opt/aws/bin/cfn-signal --exit-code $? --stack ${AWS::StackName} --resource WebAutoScalingGroup --region ${AWS::Region}
+    CreationPolicy:
+      ResourceSignal:
+        Count: !Ref WebAsgMin
+        Timeout: PT5M
   WebLaunchConfiguration70:
     Condition: PHP70
     Type: AWS::AutoScaling::LaunchConfiguration
@@ -943,22 +519,21 @@ Resources:
               php70-mysqlnd: []
           files:
             /tmp/create_site_conf.sh:
-              content:
-                !Join [
-                  "",[
-                    "#!/bin/bash -xe\n",
-                    "if [ ! -f /etc/httpd/conf.d/", !Ref WPDirectory, ".conf ]; then\n",                    
-                    "   touch /etc/httpd/conf.d/", !Ref WPDirectory, ".conf\n",
-                    "   echo 'ServerName 127.0.0.1:80' >> /etc/httpd/conf.d/", !Ref WPDirectory, ".conf\n",
-                    "   echo 'DocumentRoot /var/www/wordpress/", !Ref WPDirectory, "' >> /etc/httpd/conf.d/", !Ref WPDirectory, ".conf\n",
-                    "   echo '<Directory /var/www/wordpress/", !Ref WPDirectory, ">' >> /etc/httpd/conf.d/", !Ref WPDirectory, ".conf\n",
-                    "   echo '  Options Indexes FollowSymLinks' >> /etc/httpd/conf.d/", !Ref WPDirectory, ".conf\n",
-                    "   echo '  AllowOverride All' >> /etc/httpd/conf.d/", !Ref WPDirectory, ".conf\n",
-                    "   echo '  Require all granted' >> /etc/httpd/conf.d/", !Ref WPDirectory, ".conf\n",
-                    "   echo '</Directory>' >> /etc/httpd/conf.d/", !Ref WPDirectory, ".conf\n",
-                    "fi\n"
-                  ]
-                ]
+              content: !Sub |
+                #!/bin/bash -xe
+                amazon-linux-extras install -y php7.3 postgresql9.6 
+                yum install -y awslogs httpd php-pgsql php-gd php-soap php-intl php-mbstring php-xmlrpc php-zip
+                sed -i 's/memory_limit =.*/memory_limit = 2048M/' /etc/php.ini
+                if [ ! -f /etc/httpd/conf.d/moodle.conf ]; then                    
+                   touch /etc/httpd/conf.d/moodle.conf
+                   echo 'ServerName 127.0.0.1:80' >> /etc/httpd/conf.d/moodle.conf
+                   echo 'DocumentRoot /var/www/moodle/html' >> /etc/httpd/conf.d/moodle.conf
+                   echo '<Directory /var/www/moodle/html>' >> /etc/httpd/conf.d/moodle.conf
+                   echo '  Options Indexes FollowSymLinks' >> /etc/httpd/conf.d/moodle.conf
+                   echo '  AllowOverride All' >> /etc/httpd/conf.d/moodle.conf
+                   echo '  Require all granted' >> /etc/httpd/conf.d/moodle.conf
+                   echo '</Directory>' >> /etc/httpd/conf.d/moodle.conf
+                fi
               mode: 000500
               owner: root
               group: root
@@ -1019,17 +594,14 @@ Resources:
                 !Join [
                   "",[
                     "#!/bin/bash -xe\n",
-                    "\n",
                     "# install wp-cli\n",
                     "if [ ! -f /bin/wp/wp-cli.phar ]; then\n",
                     "   curl -o /bin/wp https://raw.githubusercontent.com/wp-cli/builds/gh-pages/phar/wp-cli.phar\n",
                     "   chmod +x /bin/wp\n",
                     "fi\n",
-                    "\n",
                     "# make site directory\n",
                     "if [ ! -d /var/www/wordpress/", !Ref WPDirectory, " ]; then\n",                    
                     "   mkdir -p /var/www/wordpress/", !Ref WPDirectory, "\n",
-                    "\n",
                     "   cd /var/www/wordpress/", !Ref WPDirectory, "\n",
                     "   # install wordpress if not installed\n",
                     "   # use public alb host name if wp domain name was empty\n",
@@ -1069,7 +641,6 @@ Resources:
                 !Join [
                   "",[
                     "#!/bin/bash -x\n",
-                    "\n",
                     "wget -P /etc/php-7.0.d/ ", !Ref PHPIniOverride, "\n"
                   ]
                 ]
